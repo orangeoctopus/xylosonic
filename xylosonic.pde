@@ -1,10 +1,12 @@
 import processing.sound.*;
 import processing.serial.*;
 
-Oscillator currentOsc;
+
 Oscillator[] oscillators = {
 new SinOsc(this), new TriOsc(this), new SawOsc(this), new SqrOsc(this) 
 };
+
+Oscillator currentOsc;
 
 Env envelope;
 
@@ -31,19 +33,14 @@ void setup() {
   String portName = Serial.list()[3]; 
   myPort = new Serial(this, portName, 115200);
   
-  //oscSin = new SinOsc(this);
-  //oscTri = new TriOsc(this);
-  //oscSaw = new SawOsc(this);
-  //oscSqr = new SqrOsc(this);
-  
-  //currentOsc = oscSin;
   currentOsc = oscillators[0];
 
+  //envelope setting
   envelope = new Env(this);
 }
 
 void draw() {
-  //background(note*(255/8)); //test
+
   background(240);
   
   drawXylophone();
@@ -63,6 +60,7 @@ void draw() {
     note = floor((distance-minDistance)/noteDistance);
     
     if(note >=0 && note < scale.length){
+      colourNotePlayed(note);
       stopAllOscExcept(currentOsc);
       if(roll < 0.25){
         currentOsc = oscillators[0];
@@ -119,23 +117,37 @@ float translateMIDI(int note) {
 void drawXylophone(){
   
   rectMode(CENTER);
+  noStroke();
   
-  fill(255,230,204);
-  rect(50,100,20,300);
-  fill(255,206, 153);
-  rect(100,100,20,300);
-  fill(255,181, 102);
-  rect(150,100,20,300);
-  fill(255,156, 51);
-  rect(200,100,20,300);
+  fill(230, 119, 0);
+  rect(140,300,80,400);
+  
   fill(255, 132, 0);
-  rect(250,100,20,300);
-  fill(204, 105, 0);
-  rect(300,100,20,300);
-  fill(153, 79, 0);
-  rect(350,100,20,300);
-  fill(102, 53, 0);
-  rect(400,100,20,300);
+  rect(240,300,80,400);
+  
+  fill(255,144, 26);
+  rect(340,300,80,400);
+  
+  fill(255, 156, 51);
+  rect(440,300,80,400);
+  
+  fill(255,169, 77);
+  rect(540,300,80,400);
+  
+  fill(255,181, 102);
+  rect(640,300,80,400);
+  
+  fill(255, 193, 128);
+  rect(740,300,80,400);
+  
+  fill(255, 206, 153);
+  rect(840,300,80,400);
+  
+}
+
+void colourNotePlayed(int note){
+  fill(20,60);//128, 66, 0);
+  rect(140+ (note*100),300,80,400);
 }
 
 
