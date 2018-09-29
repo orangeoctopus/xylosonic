@@ -23,6 +23,17 @@ int[] scale = {
 }; 
 
 
+float xyloStartPos = 160;
+
+color[] orangeColors = {
+  color(230, 119, 0), color(255, 132, 0), color(255,144, 26), color(255, 156, 51), color(255,169, 77),
+  color(255,181, 102), color(255, 193, 128), color(255, 206, 153)
+};
+
+color[] blueColors = {
+  color(0, 138, 230), color(0, 153, 255), color(26, 163, 255), color(51, 173, 255), color(77, 184, 255),
+  color(102, 194, 255), color(128, 204, 255), color(153, 214, 255)
+};
 
 int note = 0;
 
@@ -37,13 +48,15 @@ void setup() {
 
   //envelope setting
   envelope = new Env(this);
+  
+ 
 }
 
 void draw() {
 
   background(240);
-  
-  drawXylophone();
+  drawOscTypeMeter();
+  drawXylophone(orangeColors);
   
   if ( myPort.available() > 0) 
   {  // If data is available,
@@ -55,17 +68,20 @@ void draw() {
     distance = float(data[0]);
     roll = float(data[1]);
     //constrain and map roll
+    println(roll);
     roll = map(constrain(roll,-1.0,2.5),-1.0,2.5,0,1.0);
     //print(roll);
     note = floor((distance-minDistance)/noteDistance);
-    
+    showRoll(roll);
     if(note >=0 && note < scale.length){
       colourNotePlayed(note);
       stopAllOscExcept(currentOsc);
       if(roll < 0.25){
         currentOsc = oscillators[0];
+        drawXylophone(orangeColors);
       }else if(roll < 0.5){
         currentOsc = oscillators[1];
+        drawXylophone(blueColors);
       }else if(roll < 0.75){
         currentOsc = oscillators[2];
       }else{
@@ -114,40 +130,63 @@ float translateMIDI(int note) {
   return pow(2, ((note-69)/12.0))*440;
 }
 
-void drawXylophone(){
+void drawOscTypeMeter(){
+  rectMode(CENTER);
+  
+  fill(51, 173, 255);
+  rect(12,150,24,100);
+  
+  fill(133, 51, 255);
+  rect(12,250,24,100);
+  
+  fill(255, 51, 51);
+  rect(12,350,24,100);
+  
+  fill(255, 156, 51);
+  rect(12,450,24,100);
+}
+
+void drawXylophone(color[] colorArray){
   
   rectMode(CENTER);
   noStroke();
   
-  fill(230, 119, 0);
-  rect(140,300,80,400);
+  fill(colorArray[0]);
+  rect(xyloStartPos,300,80,400);
   
-  fill(255, 132, 0);
-  rect(240,300,80,400);
+  fill(colorArray[1]);
+  rect(xyloStartPos + 100,300,80,400);
   
-  fill(255,144, 26);
-  rect(340,300,80,400);
+  fill(colorArray[2]);
+  rect(xyloStartPos +200,300,80,400);
   
-  fill(255, 156, 51);
-  rect(440,300,80,400);
+  fill(colorArray[3]);
+  rect(xyloStartPos +300,300,80,400);
   
-  fill(255,169, 77);
-  rect(540,300,80,400);
+  fill(colorArray[4]);
+  rect(xyloStartPos+400,300,80,400);
   
-  fill(255,181, 102);
-  rect(640,300,80,400);
+  fill(colorArray[5]);
+  rect(xyloStartPos + 500,300,80,400);
   
-  fill(255, 193, 128);
-  rect(740,300,80,400);
+  fill(colorArray[6]);
+  rect(xyloStartPos + 600,300,80,400);
   
-  fill(255, 206, 153);
-  rect(840,300,80,400);
+  fill(colorArray[7]);
+  rect(xyloStartPos +700,300,80,400);
   
+
+}
+
+void showRoll(float adjustedRoll){
+  float yPos = map(adjustedRoll,0.0,1.0,500,100);
+  fill(24);
+  triangle(25,yPos,40,yPos+10,40,yPos-10);
 }
 
 void colourNotePlayed(int note){
   fill(20,60);//128, 66, 0);
-  rect(140+ (note*100),300,80,400);
+  rect(xyloStartPos+ (note*100),300,80,400);
 }
 
 
@@ -201,6 +240,16 @@ step all and stop all except current
 28th
 refactor
 colours
+needed contrast so less wide spectrum of the colour
+figure out which colours to show as selected - tried pickinga dark shade or a light shade - but contrast varied too much
+
+decided to go with a grey over lay - worked well
+
+29th
+colours
+refactor drawing
+colors arrays
+test pen lever
 
 
 */
