@@ -18,10 +18,13 @@ float roll;
 float minDistance = 10;
 float noteDistance = 5;
 
+int pushCounter = 0;
+
 int[] scale = { 
   60, 62, 64, 65, 67, 69, 71, 72
 }; 
 
+Boolean multipleOscModeOn = false;
 
 float xyloStartPos = 160;
 
@@ -35,6 +38,16 @@ color[] blueColors = {
   color(102, 194, 255), color(128, 204, 255), color(153, 214, 255)
 };
 
+color[] redColors = {
+  color(230, 0, 0), color(255, 0, 0), color(255, 26, 26), color(255, 51, 51), color(255, 77, 77),
+  color(255, 102, 102), color(255, 128, 128), color(255, 153, 153)
+};
+
+color[] purpleColors = {
+  color(92, 0, 230), color(102, 0, 255), color(117, 26, 255), color(133, 51, 255), color(148, 77, 255),
+  color(163, 102, 255), color(179, 128, 255), color(194, 153, 255)
+};
+
 int note = 0;
 
 void setup() {
@@ -42,7 +55,7 @@ void setup() {
   size(1000, 600); 
   
   String portName = Serial.list()[3]; 
-  myPort = new Serial(this, portName, 115200);
+  myPort = new Serial(this, portName, 9600);
   
   currentOsc = oscillators[0];
 
@@ -56,7 +69,7 @@ void draw() {
 
   background(240);
   drawOscTypeMeter();
-  drawXylophone(orangeColors);
+  drawXylophone();
   
   if ( myPort.available() > 0) 
   {  // If data is available,
@@ -67,21 +80,33 @@ void draw() {
     String[] data = val.split(",");
     distance = float(data[0]);
     roll = float(data[1]);
+    
+    if(float(data[2]) > 0){
+      
+      pushCounter++;
+      if(pushCounter > 12){
+        multipleOscModeOn = !multipleOscModeOn;
+        pushCounter = 0;
+      }
+      
+    }
     //constrain and map roll
-    println(roll);
+    //println(roll);
     roll = map(constrain(roll,-1.0,2.5),-1.0,2.5,0,1.0);
     //print(roll);
     note = floor((distance-minDistance)/noteDistance);
     showRoll(roll);
     if(note >=0 && note < scale.length){
       colourNotePlayed(note);
-      stopAllOscExcept(currentOsc);
+      
+      if(!multipleOscModeOn){
+        stopAllOscExcept(currentOsc);
+      }
+      
       if(roll < 0.25){
         currentOsc = oscillators[0];
-        drawXylophone(orangeColors);
       }else if(roll < 0.5){
         currentOsc = oscillators[1];
-        drawXylophone(blueColors);
       }else if(roll < 0.75){
         currentOsc = oscillators[2];
       }else{
@@ -144,38 +169,32 @@ void drawOscTypeMeter(){
   
   fill(255, 156, 51);
   rect(12,450,24,100);
+  
+  
 }
 
-void drawXylophone(color[] colorArray){
+void drawXylophone(){
   
   rectMode(CENTER);
   noStroke();
   
-  fill(colorArray[0]);
-  rect(xyloStartPos,300,80,400);
+  color[] colorArray;
   
-  fill(colorArray[1]);
-  rect(xyloStartPos + 100,300,80,400);
+  if(currentOsc == oscillators[0]){
+    colorArray = orangeColors;
+  } else if(currentOsc == oscillators[1]){
+    colorArray = redColors;
+  } else if(currentOsc == oscillators[2]){
+    colorArray = purpleColors;
+  } else{
+    colorArray = blueColors;
+  }
   
-  fill(colorArray[2]);
-  rect(xyloStartPos +200,300,80,400);
+  for(int i = 0; i < scale.length; i++){
+    fill(colorArray[i]);
+    rect(xyloStartPos + i*100,300,80,400 - 15*i);
+  }
   
-  fill(colorArray[3]);
-  rect(xyloStartPos +300,300,80,400);
-  
-  fill(colorArray[4]);
-  rect(xyloStartPos+400,300,80,400);
-  
-  fill(colorArray[5]);
-  rect(xyloStartPos + 500,300,80,400);
-  
-  fill(colorArray[6]);
-  rect(xyloStartPos + 600,300,80,400);
-  
-  fill(colorArray[7]);
-  rect(xyloStartPos +700,300,80,400);
-  
-
 }
 
 void showRoll(float adjustedRoll){
@@ -186,7 +205,7 @@ void showRoll(float adjustedRoll){
 
 void colourNotePlayed(int note){
   fill(20,60);//128, 66, 0);
-  rect(xyloStartPos+ (note*100),300,80,400);
+  rect(xyloStartPos + note*100,300,80,400 - 15*note);
 }
 
 
@@ -250,6 +269,7 @@ colours
 refactor drawing
 colors arrays
 test pen lever
-
-
+refactor drawing the xylophone
+push button - frame rate faster than receive so get many to trigger- -should debouce there too
+why not just debounce whole freaking thing lol
 */
