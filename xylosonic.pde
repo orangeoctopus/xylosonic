@@ -18,6 +18,9 @@ float roll;
 float minDistance = 10;
 float noteDistance = 5;
 
+float xyloMaxHeight = 600;
+float xyloWidth = 120;
+
 int pushCounter = 0;
 
 int[] scale = { 
@@ -26,7 +29,7 @@ int[] scale = {
 
 Boolean multipleOscModeOn = false;
 
-float xyloStartPos = 160;
+float xyloStartPos = 300;
 
 color[] orangeColors = {
   color(230, 119, 0), color(255, 132, 0), color(255,144, 26), color(255, 156, 51), color(255,169, 77),
@@ -52,7 +55,7 @@ int note = 0;
 
 void setup() {
   
-  size(1000, 600); 
+  size(1500, 900); 
   
   String portName = Serial.list()[3]; 
   myPort = new Serial(this, portName, 9600);
@@ -70,6 +73,11 @@ void draw() {
   background(240);
   drawOscTypeMeter();
   drawXylophone();
+  
+  //title
+  textSize(85);
+  fill(20);
+  text("Xylosonic",600,90);
   
   if ( myPort.available() > 0) 
   {  // If data is available,
@@ -90,6 +98,15 @@ void draw() {
       }
       
     }
+    
+    textSize(30);
+    if(multipleOscModeOn){
+      fill(0, 179, 60);
+      text("Multi Oscillator mode: ON",1000,770);
+    } else {
+      fill(230, 0, 0);
+      text("Multi Oscillator mode: OFF",1000,770);
+    }
     //constrain and map roll
     //println(roll);
     roll = map(constrain(roll,-1.0,2.5),-1.0,2.5,0,1.0);
@@ -101,6 +118,7 @@ void draw() {
       
       if(!multipleOscModeOn){
         stopAllOscExcept(currentOsc);
+        
       }
       
       if(roll < 0.25){
@@ -158,17 +176,30 @@ float translateMIDI(int note) {
 void drawOscTypeMeter(){
   rectMode(CENTER);
   
+  float start = 200;
+  
+  noStroke();
+  textSize(30);
+  
   fill(51, 173, 255);
-  rect(12,150,24,100);
+  rect(65,start,35,xyloMaxHeight/4);
+  text("Square",100,start);
   
   fill(133, 51, 255);
-  rect(12,250,24,100);
+  rect(65,start + xyloMaxHeight/4,35,xyloMaxHeight/4);
+  text("Saw",100,start + xyloMaxHeight/4);
   
   fill(255, 51, 51);
-  rect(12,350,24,100);
+  rect(65,start + xyloMaxHeight/2,35,xyloMaxHeight/4);
+  text("Triangle",100,start + xyloMaxHeight/2);
   
   fill(255, 156, 51);
-  rect(12,450,24,100);
+  rect(65,start + xyloMaxHeight/4*3,35,xyloMaxHeight/4);
+  text("Sine",100,start + xyloMaxHeight/4*3);
+  
+  fill(20);
+  text("Oscillator",40,770);
+  text("Type",70,800);
   
   
 }
@@ -177,6 +208,10 @@ void drawXylophone(){
   
   rectMode(CENTER);
   noStroke();
+  
+  fill(130);
+  rect(820,250,1200,30);
+  rect(820,600,1200,30);
   
   color[] colorArray;
   
@@ -192,20 +227,20 @@ void drawXylophone(){
   
   for(int i = 0; i < scale.length; i++){
     fill(colorArray[i]);
-    rect(xyloStartPos + i*100,300,80,400 - 15*i);
+    rect(xyloStartPos + i*xyloWidth*1.25,420,xyloWidth,xyloMaxHeight - 15*i);
   }
   
 }
 
 void showRoll(float adjustedRoll){
-  float yPos = map(adjustedRoll,0.0,1.0,500,100);
+  float yPos = map(adjustedRoll,0.0,1.0,130 + xyloMaxHeight,130);
   fill(24);
-  triangle(25,yPos,40,yPos+10,40,yPos-10);
+  triangle(45,yPos,25,yPos+10,25,yPos-10);
 }
 
 void colourNotePlayed(int note){
   fill(20,60);//128, 66, 0);
-  rect(xyloStartPos + note*100,300,80,400 - 15*note);
+  rect(xyloStartPos + note*xyloWidth*1.25,420,xyloWidth,xyloMaxHeight - 15*note);
 }
 
 
@@ -272,4 +307,7 @@ test pen lever
 refactor drawing the xylophone
 push button - frame rate faster than receive so get many to trigger- -should debouce there too
 why not just debounce whole freaking thing lol
+
+1st
+moet settings - so easy to adjust sizes
 */
