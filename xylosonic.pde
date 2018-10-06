@@ -1,36 +1,16 @@
 import processing.sound.*;
 import processing.serial.*;
 
-
-Oscillator[] oscillators = {
-new SinOsc(this), new TriOsc(this), new SawOsc(this), new SqrOsc(this) 
-};
-
-Oscillator currentOsc;
-
-Env envelope;
-
-Serial myPort;  // Create object from Serial class
-String val;     // Data received from the serial port
-float distance;
-float roll;
-
+//*****Xylophone Settings*****//
 float minDistance = 10;
 float noteDistance = 5;
 
 float xyloMaxHeight = 600;
 float xyloWidth = 120;
 
-int pushCounter = 0;
-
-int[] scale = { 
-  60, 62, 64, 65, 67, 69, 71, 72
-}; 
-
-Boolean multipleOscModeOn = false;
-
 float xyloStartPos = 300;
 
+//Arrays of colours fro each xylophone note
 color[] orangeColors = {
   color(230, 119, 0), color(255, 132, 0), color(255,144, 26), color(255, 156, 51), color(255,169, 77),
   color(255,181, 102), color(255, 193, 128), color(255, 206, 153)
@@ -51,68 +31,102 @@ color[] purpleColors = {
   color(163, 102, 255), color(179, 128, 255), color(194, 153, 255)
 };
 
+//*****Oscillator Settings*****//
+
+//Midi notes to play
+int[] scale = { 
+  60, 62, 64, 65, 67, 69, 71, 72
+}; 
+
+Oscillator[] oscillators = {
+new SinOsc(this), new TriOsc(this), new SawOsc(this), new SqrOsc(this) 
+};
+
+Oscillator currentOsc;
+
+Env envelope;
+
+//data and variables
+Serial myPort;  // Create object from Serial class
+String val;     // Data received from the serial port
+float distance;
+float roll;
+
+int pushCounter = 0;
+
+Boolean multipleOscModeOn = false;
+
 int note = 0;
 
 void setup() {
   
-  size(1500, 900); 
+  size(1500, 900); //setup canvas size
   
+  //read from serial port at baudrate 6900
   String portName = Serial.list()[3]; 
   myPort = new Serial(this, portName, 9600);
   
+  //set default oscillator
   currentOsc = oscillators[0];
 
-  //envelope setting
+  //use default envelope so can adjust sound if needed
   envelope = new Env(this);
   
- 
 }
 
 void draw() {
 
   background(240);
+  
+  //Draw the Visuals on Screen
   drawOscTypeMeter();
   drawXylophone();
   
-  //title
+  //Show title at the top
   textSize(85);
   fill(20);
   text("Xylosonic",600,90);
   
+  //read from serial port if port is available
   if ( myPort.available() > 0) 
   {  // If data is available,
     val = myPort.readStringUntil('\n'); // read it and store it in val
   } 
   
+  //Only proceed if data from serial is not null or us not an empty string
   if(val != null && !val.isEmpty()){
+    //unpack the data
     String[] data = val.split(",");
-    distance = float(data[0]);
-    roll = float(data[1]);
+    distance = float(data[0]); //first value is distane from ultrasonic distance sensor
+    roll = float(data[1]); //second value is the roll value from IMU
     
+    //the third value is push button value, it sends 0 by default but if pressed, 1 is sent
     if(float(data[2]) > 0){
-      
-      pushCounter++;
+      pushCounter++; 
+      /*if a press is detected count the 1s received as the frame rate is faster 
+      than the serial send, around 13-17 '1's get received, 
+      hence to only react to this once, proceed after over 12 counts and reset counter*/
       if(pushCounter > 12){
-        multipleOscModeOn = !multipleOscModeOn;
-        pushCounter = 0;
+        multipleOscModeOn = !multipleOscModeOn; //switch the multiple oscillator mode
+        pushCounter = 0; //reset counter
       }
       
     }
     
-    textSize(30);
-    if(multipleOscModeOn){
-      fill(0, 179, 60);
-      text("Multi Oscillator mode: ON",1000,770);
-    } else {
-      fill(230, 0, 0);
-      text("Multi Oscillator mode: OFF",1000,770);
-    }
-    //constrain and map roll
-    //println(roll);
-    roll = map(constrain(roll,-1.0,2.5),-1.0,2.5,0,1.0);
-    //print(roll);
+    //update visual to show the text and status of whether mulsitple oscillator mode is on
+    showOscMode();
+    
+    //constrain and map roll: value is constrained as we do not need user to rotate imu 360 degrees
+    //so constrain to the main usevalues and map it between 0-1 for simpler spliting
+    roll = map(constrain(roll,0.5,3),0.5,3.0,0,1.0);
+    showRoll(roll); //update visual to indicate value of roll in the meter
+    
+    //determine which 'note' would be played based on the distance value
     note = floor((distance-minDistance)/noteDistance);
-    showRoll(roll);
+    
+    //check that distance is within the sound range:
+    //note is 0 if it is less than the minimum and 
+    //note is greater than the scale array length if it longer than max sound range
     if(note >=0 && note < scale.length){
       colourNotePlayed(note);
       
@@ -158,6 +172,17 @@ void stopAllOscExcept(Oscillator currentOsc){
       osc.stop();
     }
   }
+}
+
+void showOscMode(){
+  textSize(30);
+    if(multipleOscModeOn){
+      fill(0, 179, 60);
+      text("Multi Oscillator mode: ON",1000,770);
+    } else {
+      fill(230, 0, 0);
+      text("Multi Oscillator mode: OFF",1000,770);
+    }
 }
 
 float volume(){
@@ -310,4 +335,5 @@ why not just debounce whole freaking thing lol
 
 1st
 moet settings - so easy to adjust sizes
+added text and more refactoring
 */
