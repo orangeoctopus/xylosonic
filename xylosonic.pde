@@ -2,15 +2,15 @@ import processing.sound.*;
 import processing.serial.*;
 
 //*****Xylophone Settings*****//
-float minDistance = 10;
-float noteDistance = 5;
+float minDistance = 10; //minimum distance (CM)from sensor to produce a sound
+float noteDistance = 5; //distance between (CM) each note sound
 
+//Xylophone positions and sizes
 float xyloMaxHeight = 600;
 float xyloWidth = 120;
-
 float xyloStartPos = 300;
 
-//Arrays of colours fro each xylophone note
+//Arrays of colours for each xylophone note
 color[] orangeColors = {
   color(230, 119, 0), color(255, 132, 0), color(255,144, 26), color(255, 156, 51), color(255,169, 77),
   color(255,181, 102), color(255, 193, 128), color(255, 206, 153)
@@ -38,25 +38,27 @@ int[] scale = {
   60, 62, 64, 65, 67, 69, 71, 72
 }; 
 
+//4 types of oscillaors
 Oscillator[] oscillators = {
 new SinOsc(this), new TriOsc(this), new SawOsc(this), new SqrOsc(this) 
 };
 
-Oscillator currentOsc;
+Oscillator currentOsc; //reference current Oscillator to play sound
 
-Env envelope;
+Env envelope; //sound enevelope for adjusting sound if needed
 
-//data and variables
+//****Data and variables*****//
 Serial myPort;  // Create object from Serial class
 String val;     // Data received from the serial port
 float distance;
 float roll;
 
-int pushCounter = 0;
+Boolean multipleOscModeOn = false; 
+//push button state variables
+int MOModeState = 0;
+int LastMOModeState = 0;
 
-Boolean multipleOscModeOn = false;
-
-int note = 0;
+int note = 0; //determine which note to play
 
 void setup() {
   
@@ -92,49 +94,45 @@ void draw() {
   {  // If data is available,
     val = myPort.readStringUntil('\n'); // read it and store it in val
   } 
-  
-  //Only proceed if data from serial is not null or us not an empty string
+  print(val);
+  //Only proceed if data from serial is not null or is not an empty string
   if(val != null && !val.isEmpty()){
     //unpack the data
     String[] data = val.split(",");
-    distance = float(data[0]); //first value is distane from ultrasonic distance sensor
-    roll = float(data[1]); //second value is the roll value from IMU
+    if(data.length >2){ //proceed only if data received is complete to avoid crash
+      distance = float(data[0]); //first value is distane from ultrasonic distance sensor
+      roll = float(data[1]); //second value is the roll value from IMU
     
-    //the third value is push button value, it sends 0 by default but if pressed, 1 is sent
-    if(float(data[2]) > 0){
-      pushCounter++; 
-      /*if a press is detected count the 1s received as the frame rate is faster 
-      than the serial send, around 13-17 '1's get received, 
-      hence to only react to this once, proceed after over 12 counts and reset counter*/
-      if(pushCounter > 12){
-        multipleOscModeOn = !multipleOscModeOn; //switch the multiple oscillator mode
-        pushCounter = 0; //reset counter
+      //the third value is push button value, it sends 0 by default but if pressed, 1 is sent
+      MOModeState = int(data[2]);
+      if(MOModeState != LastMOModeState && MOModeState > 0){
+         multipleOscModeOn = !multipleOscModeOn;//toggle multipleOscMode
       }
-      
-    }
+      LastMOModeState = MOModeState; //update Multiple Oscillator Mode State
     
-    //update visual to show the text and status of whether mulsitple oscillator mode is on
-    showOscMode();
+      //update visual to show the text and status of whether mulsitple oscillator mode is on
+      showOscMode();
     
-    //constrain and map roll: value is constrained as we do not need user to rotate imu 360 degrees
-    //so constrain to the main usevalues and map it between 0-1 for simpler spliting
-    roll = map(constrain(roll,0.5,3),0.5,3.0,0,1.0);
-    showRoll(roll); //update visual to indicate value of roll in the meter
+      //constrain and map roll: value is constrained as we do not need user to rotate imu 360 degrees
+      //so constrain to the main usevalues and map it between 0-1 for simpler spliting
+      roll = map(constrain(roll,-1,3),-1,3.0,0,1.0);
+      showRoll(roll); //update visual to indicate value of roll in the meter
     
-    //determine which 'note' would be played based on the distance value
-    note = floor((distance-minDistance)/noteDistance);
+      //determine which 'note' would be played based on the distance value
+      note = floor((distance-minDistance)/noteDistance);
     
-    //check that distance is within the sound range:
-    //note is 0 if it is less than the minimum and 
-    //note is greater than the scale array length if it longer than max sound range
-    if(note >=0 && note < scale.length){
+      //check that distance is within the sound range (10cm-50cm):
+      // - note is 0 if it is less than the minimum and 
+      // - note is greater than the scale array length if it longer than max sound range
+      if(note >=0 && note < scale.length){
       colourNotePlayed(note);
       
       if(!multipleOscModeOn){
-        stopAllOscExcept(currentOsc);
-        
+        //if multiple Oscillator mode is OFF, stop all the other oscillators
+        stopAllOscExcept(currentOsc); 
       }
       
+      //determine which oscillator to use based on adjusted Roll value
       if(roll < 0.25){
         currentOsc = oscillators[0];
       }else if(roll < 0.5){
@@ -144,29 +142,29 @@ void draw() {
       }else{
         currentOsc = oscillators[3];
       }
-     if(currentOsc == oscillators[2] || currentOsc == oscillators[3]){
+      
+      //Play the note
        currentOsc.play(translateMIDI(scale[note]), volume());
-     } else {
-       currentOsc.play(translateMIDI(scale[note]), 1);
-     }
-      
-      
+
     } else {
-      stopAllOsc();
+      stopAllOsc(); //if distance is out of sound range, stop all oscilators
     }
     
+    }
   }
     
       
 }
 
 void stopAllOsc(){
+  //stop all the Oscillators form playing
   for(Oscillator osc: oscillators){
     osc.stop();
   }
 }
 
 void stopAllOscExcept(Oscillator currentOsc){
+  //only have the current oscillator playing
   for(Oscillator osc: oscillators){
     if(osc != currentOsc){
       osc.stop();
@@ -175,6 +173,7 @@ void stopAllOscExcept(Oscillator currentOsc){
 }
 
 void showOscMode(){
+  //show visuals to indicate whether muliple Oscillator mode is on or off
   textSize(30);
     if(multipleOscModeOn){
       fill(0, 179, 60);
@@ -186,6 +185,7 @@ void showOscMode(){
 }
 
 float volume(){
+  //square and saw oscillators are considerable louder than others so tone them down a bit 
   if(currentOsc == oscillators[2] || currentOsc == oscillators[3]){
       return 0.3;
    } else {
@@ -193,12 +193,14 @@ float volume(){
    }
 }
     
-
+//translate note MIDI numbers to frequency for Oscillator Object
 float translateMIDI(int note) {
   return pow(2, ((note-69)/12.0))*440;
 }
 
+//Draw visuals to show which oscillator type is selected
 void drawOscTypeMeter(){
+  
   rectMode(CENTER);
   
   float start = 200;
@@ -222,6 +224,7 @@ void drawOscTypeMeter(){
   rect(65,start + xyloMaxHeight/4*3,35,xyloMaxHeight/4);
   text("Sine",100,start + xyloMaxHeight/4*3);
   
+  //Write the type
   fill(20);
   text("Oscillator",40,770);
   text("Type",70,800);
@@ -229,17 +232,20 @@ void drawOscTypeMeter(){
   
 }
 
+//draw the xylophone with updated Values
 void drawXylophone(){
   
   rectMode(CENTER);
   noStroke();
   
+  //draw base of Xylophone
   fill(130);
   rect(820,250,1200,30);
   rect(820,600,1200,30);
   
   color[] colorArray;
   
+  //determine colour of the xylophone from selected oscillator type
   if(currentOsc == oscillators[0]){
     colorArray = orangeColors;
   } else if(currentOsc == oscillators[1]){
@@ -250,6 +256,7 @@ void drawXylophone(){
     colorArray = blueColors;
   }
   
+  //draw wach key of the xylophone
   for(int i = 0; i < scale.length; i++){
     fill(colorArray[i]);
     rect(xyloStartPos + i*xyloWidth*1.25,420,xyloWidth,xyloMaxHeight - 15*i);
@@ -257,83 +264,15 @@ void drawXylophone(){
   
 }
 
+//draw indicator to show the roll changing
 void showRoll(float adjustedRoll){
   float yPos = map(adjustedRoll,0.0,1.0,130 + xyloMaxHeight,130);
   fill(24);
   triangle(45,yPos,25,yPos+10,25,yPos-10);
 }
 
+//darken the corresponding note being played on teh Xylophone
 void colourNotePlayed(int note){
   fill(20,60);//128, 66, 0);
   rect(xyloStartPos + note*xyloWidth*1.25,420,xyloWidth,xyloMaxHeight - 15*note);
 }
-
-
-/*plan
-read: distance (freq), orientation (amp), state(from button for sign triangle sine)
-maybe colour with amp and shape indication with state
-
-1 oscillator?
-vars:
-osctype
-amplitude
-
-freq array - frequency mapped to midi
-
-each event push button trigger changes oscilator type - otherwise set reverb on off
-
-each distance - check and play different oscillator frequency?
-
-check distance betwen x and y to play - set freq
-
-serial event contains - push button change - when change type or somethign
-
-midi: http://learningprocessing.com/examples/chp20/example-20-07-envelope
-
-volume = float(port.readStringUntil('\n');
-
-1st:
-get imu data hrough
-get ultrasonic data through
-combien them together to print serial
-test background colour react
-imu volume
-
-
-26thsept
-
-processing crash lol
-distance testing
-shorten if statemetns of notes
-imu for volume - maybe osc type
-found maybe can have modes echo or not
-reading serial from 2 inputs string splitting
-nulls at teh beginning check
-
-27th
-draw rectangeles -test colours
-test imu for osc types - test teh types of osc avalable
-refactor to reuse code  - current soc instead of just 4 osc and stop for each - found they all Oscillator class
-step all and stop all except current
-
-28th
-refactor
-colours
-needed contrast so less wide spectrum of the colour
-figure out which colours to show as selected - tried pickinga dark shade or a light shade - but contrast varied too much
-
-decided to go with a grey over lay - worked well
-
-29th
-colours
-refactor drawing
-colors arrays
-test pen lever
-refactor drawing the xylophone
-push button - frame rate faster than receive so get many to trigger- -should debouce there too
-why not just debounce whole freaking thing lol
-
-1st
-moet settings - so easy to adjust sizes
-added text and more refactoring
-*/
